@@ -1,0 +1,27 @@
+[tool]
+name = "rsync"
+description = "Fast file synchronization tool"
+
+[[arguments]]
+flag = "-a"
+long = "--archive"
+description = "archive mode"
+type = "boolean"
+
+[[arguments]]
+flag = "--delete"
+description = "delete removed files"
+type = "boolean"
+
+[[arguments]]
+flag = "--progress"
+description = "show transfer progress"
+type = "boolean"
+
+[[parameters]]
+name = "source"
+type = "path"
+
+[[parameters]]
+name = "destination"
+type = "path"
