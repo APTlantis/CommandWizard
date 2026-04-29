@@ -14,10 +14,10 @@
   <Identity
     Name="commandwizard"
     Publisher="CN=Administrator"
-    Version="1.0.0.4" />
+    Version="1.0.0.0" />
 
   <Properties>
-    <DisplayName>commandwizard</DisplayName>
+    <DisplayName>CommandWizard</DisplayName>
     <PublisherDisplayName>Administrator</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -37,8 +37,8 @@
       uap10:TrustLevel="mediumIL"
       uap10:RuntimeBehavior="packagedClassicApp">
       <uap:VisualElements
-        DisplayName="commandwizard"
-        Description="Windows Application"
+        DisplayName="Aptlantis Command Wizard"
+        Description="Schema-driven command builder"
         BackgroundColor="transparent"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png">

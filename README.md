@@ -1,114 +1,81 @@
-# 📦 CommandWizard
+# CommandWizard
 
-> Schema-driven WinUI desktop tool for constructing CLI commands through a guided wizard interface
+CommandWizard is a Windows desktop app for building CLI commands from editable TOML tool schemas. It loads schemas, lets you choose actions, flags, options, and parameters, then produces a copyable command preview and saved favorites.
 
----
+## Release Status
 
-## 🔖 Status
+Current target: `v1.0.0` local signed MSIX.
 
-![status](https://img.shields.io/badge/status-v1-complete-lightgrey)
-![license](https://img.shields.io/badge/license-MIT-blue)
-![language](https://img.shields.io/badge/language-C#-blue)
+- App package version: `1.0.0.0`
+- Package identity publisher: `CN=Administrator`
+- Signing certificate: `devcert.pfx` local development certificate
+- Output package: `dist\CommandWizard-1.0.0.0.msix`
 
-*(Badges are optional — add/remove as needed.)*
+The development certificate is intended for local machines and trusted testers only. For public distribution, replace it with a trusted code-signing certificate and update the manifest publisher to match.
 
----
+## Build And Test
 
-## 🧭 Overview
+```powershell
+dotnet build .\CommandWizard.csproj -c Release
+dotnet test .\CommandWizard.Tests\CommandWizard.Tests.csproj -c Release
+winapp cert info .\devcert.pfx
+```
 
-**CommandWizard** is an v1-complete project focused on:
-
-* Practical, production-minded tooling
-* Clear structure and metadata
-* Long-term maintainability
-* Experimentation across languages and platforms
-
-This repository may include:
-
-* Libraries
-* Tools
-* Experiments
-* Reference implementations
-* Infrastructure or automation components
-
----
-
-## 🛠️ Languages & Technologies
-
-Commonly used:
-
-* C#
-
----
-
-## 📁 Repository Structure
+The certificate subject must match the manifest publisher:
 
 ```text
-/
-├─ src/            # Source code
-├─ tools/          # Utilities and helpers
-├─ docs/           # Documentation (optional)
-├─ assets/         # Static or metadata assets
-├─ metadata.toml   # Machine-readable project metadata
-└─ README.md
+Subject: CN=Administrator
 ```
 
-*(Adjust per repo — this is a baseline, not a rule.)*
+## Package MSIX
 
----
+Use the release script:
 
-## 🚀 Usage
-
-Basic usage, build, or run instructions go here.
-
-```bash
-# example
-docker build .
+```powershell
+.\scripts\package-msix.ps1
 ```
 
-If this is a library, include a minimal usage snippet.
-If it’s experimental, say so plainly.
+The script publishes a self-contained win-x64 Release build with the Windows App SDK runtime bundled into the publish folder:
 
----
-
-## 🧪 Project Philosophy
-
-* Prefer **clarity over cleverness**
-* Prefer **data over assumptions**
-* Prefer **composable systems**
-* Metadata is a first-class citizen
-* Documentation evolves with the code
-
----
-
-## 📜 License
-
-MIT License.
-See [`LICENSE`](./LICENSE) for details.
-
----
-
-## 👤 Author
-
-Maintained by **Herb**
-Contributions, forks, and discussion welcome.
-
----
-
-```html
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "SoftwareSourceCode",
-  "name": "CommandWizard",
-  "description": "Schema-driven WinUI desktop tool for constructing CLI commands through a guided wizard interface",
-  "license": "https://opensource.org/licenses/MIT",
-  "programmingLanguage": ["C#"],
-  "author": {
-    "@type": "Person",
-    "name": "Herb"
-  },
-  "codeRepository": "https://github.com/Aptlantis/commandwizard"
-}
-</script>
+```text
+dist\v1.0.0\win-x64\publish
 ```
+
+Then it creates and signs:
+
+```text
+dist\CommandWizard-1.0.0.0.msix
+```
+
+Equivalent manual commands:
+
+```powershell
+dotnet publish .\CommandWizard.csproj -c Release -r win-x64 --self-contained true /p:WindowsAppSDKSelfContained=true -o .\dist\v1.0.0\win-x64\publish
+winapp package .\dist\v1.0.0\win-x64\publish --manifest .\appxmanifest.xml --cert .\devcert.pfx --cert-password password --exe CommandWizard.exe --output .\dist\CommandWizard-1.0.0.0.msix
+```
+
+## Install Local Signed Build
+
+Trust the development certificate once on each machine:
+
+```powershell
+winapp cert install .\devcert.pfx
+```
+
+Then install:
+
+```powershell
+Add-AppxPackage .\dist\CommandWizard-1.0.0.0.msix
+```
+
+Launch **Aptlantis Command Wizard** from the Start menu.
+
+## Smoke Test
+
+After installing the MSIX:
+
+- Confirm the app launches as **Aptlantis Command Wizard**.
+- Confirm the bundled `rsync` schema loads.
+- Toggle an option and verify the command preview updates.
+- Copy or save a command and confirm the app remains responsive.
+- Confirm the package logo/display name appears correctly in Windows.
