@@ -220,6 +220,7 @@ BundleArtifacts/
 Package.StoreAssociation.xml
 _pkginfo.txt
 *.appx
+*.msix
 *.appxbundle
 *.appxupload
 
@@ -365,3 +366,10 @@ FodyWeavers.xsd
 # Development certificate
 devcert.pfx
 /project-images
+
+# WinApp CLI and release packaging output
+/.winapp/
+/dist/
+
+# Local IDE state
+/.idea/go.imports.xml
