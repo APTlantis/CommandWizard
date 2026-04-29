@@ -1,9 +1,11 @@
 using System;
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Windows;
+using System.Windows.Data;
 using CommandWizard.Models;
 using CommandWizard.Services;
 
@@ -20,25 +22,63 @@ namespace CommandWizard.ViewModels
         private SchemaAction? _selectedActionForEdit;
         private SchemaArgument? _selectedArgumentForEdit;
         private SchemaParameter? _selectedParameterForEdit;
+        private SchemaTag? _selectedTagForEdit;
+        private string _pasteCommandText = string.Empty;
+        private string _toolSearchText = string.Empty;
+        private string _selectedTagFilter = "All";
+        private string _selectedFavoriteTagFilter = "All";
+        private string _favoriteSearchText = string.Empty;
 
         public MainViewModel()
         {
-            _schemaDirectory = Path.Combine(AppContext.BaseDirectory, "schemas");
-            _historyPath = Path.Combine(AppContext.BaseDirectory, "history.json");
+            var dataRoot = AppPaths.ResolveDataRoot();
+            _schemaDirectory = Path.Combine(dataRoot, "schemas");
+            _historyPath = Path.Combine(dataRoot, "history.json");
             Tools = new ObservableCollection<ToolSchemaViewModel>();
+            Favorites = new ObservableCollection<FavoriteCommandViewModel>();
+            ToolsView = CollectionViewSource.GetDefaultView(Tools);
+            ToolsView.Filter = FilterTool;
+            Tools.CollectionChanged += (_, __) => RefreshTagFilters();
+            FavoritesView = CollectionViewSource.GetDefaultView(Favorites);
+            FavoritesView.Filter = FilterFavorite;
+            InitializeTagPresets();
             LoadSchemas();
+            LoadFavorites();
+            RefreshTagFilters();
+            RefreshFavoriteTagFilters();
         }
 
         internal MainViewModel(System.Collections.Generic.IEnumerable<ToolSchema> schemas)
         {
-            _schemaDirectory = Path.Combine(AppContext.BaseDirectory, "schemas");
-            _historyPath = Path.Combine(AppContext.BaseDirectory, "history.json");
+            var dataRoot = AppPaths.ResolveDataRoot();
+            _schemaDirectory = Path.Combine(dataRoot, "schemas");
+            _historyPath = Path.Combine(dataRoot, "history.json");
             Tools = new ObservableCollection<ToolSchemaViewModel>(
                 schemas.Select(schema => new ToolSchemaViewModel(schema)));
+            Favorites = new ObservableCollection<FavoriteCommandViewModel>();
+            ToolsView = CollectionViewSource.GetDefaultView(Tools);
+            ToolsView.Filter = FilterTool;
+            Tools.CollectionChanged += (_, __) => RefreshTagFilters();
+            FavoritesView = CollectionViewSource.GetDefaultView(Favorites);
+            FavoritesView.Filter = FilterFavorite;
+            InitializeTagPresets();
+            foreach (var tool in Tools)
+            {
+                RegisterTool(tool);
+            }
             SelectedTool = Tools.FirstOrDefault();
+            LoadFavorites();
+            RefreshTagFilters();
+            RefreshFavoriteTagFilters();
         }
 
         public ObservableCollection<ToolSchemaViewModel> Tools { get; }
+        public ObservableCollection<FavoriteCommandViewModel> Favorites { get; }
+        public ICollectionView ToolsView { get; }
+        public ObservableCollection<string> TagFilters { get; } = new();
+        public ICollectionView FavoritesView { get; }
+        public ObservableCollection<string> FavoriteTagFilters { get; } = new();
+        public IReadOnlyList<Models.TagPreset> TagPresets { get; } = new List<Models.TagPreset>();
 
         public ToolSchemaViewModel? SelectedTool
         {
@@ -100,6 +140,17 @@ namespace CommandWizard.ViewModels
             }
         }
 
+        public SchemaTag? SelectedTagForEdit
+        {
+            get => _selectedTagForEdit;
+            set
+            {
+                if (_selectedTagForEdit == value) return;
+                _selectedTagForEdit = value;
+                OnPropertyChanged();
+            }
+        }
+
         public string TaskLabel
         {
             get => _taskLabel;
@@ -122,6 +173,65 @@ namespace CommandWizard.ViewModels
             }
         }
 
+        public string PasteCommandText
+        {
+            get => _pasteCommandText;
+            set
+            {
+                if (_pasteCommandText == value) return;
+                _pasteCommandText = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string ToolSearchText
+        {
+            get => _toolSearchText;
+            set
+            {
+                if (_toolSearchText == value) return;
+                _toolSearchText = value;
+                OnPropertyChanged();
+                ToolsView.Refresh();
+            }
+        }
+
+        public string SelectedTagFilter
+        {
+            get => _selectedTagFilter;
+            set
+            {
+                if (_selectedTagFilter == value) return;
+                _selectedTagFilter = value;
+                OnPropertyChanged();
+                ToolsView.Refresh();
+            }
+        }
+
+        public string SelectedFavoriteTagFilter
+        {
+            get => _selectedFavoriteTagFilter;
+            set
+            {
+                if (_selectedFavoriteTagFilter == value) return;
+                _selectedFavoriteTagFilter = value;
+                OnPropertyChanged();
+                FavoritesView.Refresh();
+            }
+        }
+
+        public string FavoriteSearchText
+        {
+            get => _favoriteSearchText;
+            set
+            {
+                if (_favoriteSearchText == value) return;
+                _favoriteSearchText = value;
+                OnPropertyChanged();
+                FavoritesView.Refresh();
+            }
+        }
+
         public void CopyCommand()
         {
             if (string.IsNullOrWhiteSpace(CommandPreview))
@@ -131,7 +241,6 @@ namespace CommandWizard.ViewModels
             }
 
             Clipboard.SetText(CommandPreview);
-            AppendHistory(CommandPreview);
             MessageBox.Show("Command copied to clipboard.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -139,12 +248,12 @@ namespace CommandWizard.ViewModels
         {
             if (string.IsNullOrWhiteSpace(CommandPreview))
             {
-                MessageBox.Show("No command to generate yet.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("No command to save yet.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
-            AppendHistory(CommandPreview);
-            MessageBox.Show("Command saved to history.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+            AddFavorite(CommandPreview);
+            MessageBox.Show("Command saved to favorites.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         public void UpdateCommandPreview()
@@ -167,8 +276,78 @@ namespace CommandWizard.ViewModels
                 SourcePath = ""
             };
             var vm = new ToolSchemaViewModel(schema);
+            RegisterTool(vm);
             Tools.Add(vm);
             SelectedTool = vm;
+        }
+
+        public bool ImportSchemaFromHelp(string commandName, string helpArgs, bool useAdvancedSources, System.Collections.Generic.IEnumerable<string>? excludedFlags = null)
+        {
+            if (string.IsNullOrWhiteSpace(commandName))
+            {
+                MessageBox.Show("Command name is required.", "Import Schema", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            AppLogger.Info($"Import start (command): {commandName} {helpArgs} | advanced={useAdvancedSources}");
+
+            if (!HelpSchemaImporter.TryImportFromCommand(commandName, helpArgs, useAdvancedSources, out var schema, out var error))
+            {
+                var message = string.IsNullOrWhiteSpace(error) ? "Import failed." : error;
+                AppLogger.Error($"Import failed (command): {commandName}", new InvalidOperationException(message));
+                MessageBox.Show(message, "Import Schema", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            ApplyImportExclusions(schema, excludedFlags);
+            schema.SourcePath = string.Empty;
+            var vm = new ToolSchemaViewModel(schema);
+            vm.IsImportedUnsaved = true;
+            RegisterTool(vm);
+            Tools.Add(vm);
+            SelectedTool = vm;
+            AppLogger.Info($"Import success (command): {commandName} | {vm.ImportSummary}");
+            MessageBox.Show(
+                $"Schema imported. {vm.ImportSummary}. Review and save when ready.",
+                "Import Schema",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return true;
+        }
+
+        public bool ImportSchemaFromHelpText(string commandName, string helpText, bool useAdvancedSources, System.Collections.Generic.IEnumerable<string>? excludedFlags = null)
+        {
+            if (string.IsNullOrWhiteSpace(commandName))
+            {
+                MessageBox.Show("Command name is required.", "Import Schema", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            helpText ??= string.Empty;
+            AppLogger.Info($"Import start (paste): {commandName} (len={helpText.Length}) | advanced={useAdvancedSources}");
+
+            if (!HelpSchemaImporter.TryImportFromHelpText(commandName, helpText, useAdvancedSources, out var schema, out var error))
+            {
+                var message = string.IsNullOrWhiteSpace(error) ? "Import failed." : error;
+                AppLogger.Error($"Import failed (paste): {commandName}", new InvalidOperationException(message));
+                MessageBox.Show(message, "Import Schema", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return false;
+            }
+
+            ApplyImportExclusions(schema, excludedFlags);
+            schema.SourcePath = string.Empty;
+            var vm = new ToolSchemaViewModel(schema);
+            vm.IsImportedUnsaved = true;
+            RegisterTool(vm);
+            Tools.Add(vm);
+            SelectedTool = vm;
+            AppLogger.Info($"Import success (paste): {commandName} | {vm.ImportSummary}");
+            MessageBox.Show(
+                $"Schema imported. {vm.ImportSummary}. Review and save when ready.",
+                "Import Schema",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return true;
         }
 
         public void AddAction()
@@ -233,6 +412,28 @@ namespace CommandWizard.ViewModels
             SelectedParameterForEdit = parameter;
         }
 
+        public void AddTag()
+        {
+            if (SelectedTool == null) return;
+            var defaultColor = TagPresets.FirstOrDefault()?.Color ?? "#7A7A7A";
+            var tag = new SchemaTag { Name = "tag", Color = defaultColor };
+            SelectedTool.Schema.Tags.Add(tag);
+            SelectedTagForEdit = tag;
+        }
+
+        public void ApplyTagColor(string color)
+        {
+            if (SelectedTagForEdit != null)
+                SelectedTagForEdit.Color = color;
+        }
+
+        public void RemoveTag()
+        {
+            if (SelectedTool == null || SelectedTagForEdit == null) return;
+            SelectedTool.Schema.Tags.Remove(SelectedTagForEdit);
+            SelectedTagForEdit = null;
+        }
+
         public void RemoveParameter()
         {
             if (SelectedTool == null || SelectedParameterForEdit == null) return;
@@ -277,9 +478,24 @@ namespace CommandWizard.ViewModels
                 SelectedTool.SourcePath = filePath;
             }
 
-            var toml = SchemaSerialization.Serialize(SelectedTool.Schema);
-            File.WriteAllText(filePath, toml);
-            MessageBox.Show("Schema saved.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+            try
+            {
+                Directory.CreateDirectory(_schemaDirectory);
+                var toml = SchemaSerialization.Serialize(SelectedTool.Schema);
+                File.WriteAllText(filePath, toml);
+                SelectedTool.IsImportedUnsaved = false;
+                AppLogger.Info($"Schema saved: {filePath}");
+                MessageBox.Show("Schema saved.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error($"Schema save failed: {filePath}", ex);
+                MessageBox.Show(
+                    $"Failed to save schema: {ex.Message}",
+                    "Command Wizard",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         public void CopyToolToAppDirectory()
@@ -367,6 +583,7 @@ namespace CommandWizard.ViewModels
                     var schema = SchemaSerialization.Parse(File.ReadAllText(file));
                     schema.SourcePath = file;
                     var vm = new ToolSchemaViewModel(schema);
+                    RegisterTool(vm);
                     Tools.Add(vm);
                 }
                 catch (Exception ex)
@@ -383,9 +600,154 @@ namespace CommandWizard.ViewModels
         }
 
 
-        private void AppendHistory(string command)
+        public void AddFavoriteFromPaste()
         {
-            var record = new HistoryRecord
+            if (string.IsNullOrWhiteSpace(PasteCommandText))
+            {
+                MessageBox.Show("Paste a command first.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            AddFavorite(PasteCommandText.Trim());
+            PasteCommandText = string.Empty;
+            MessageBox.Show("Command saved to favorites.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        public void CopyFavorite(FavoriteCommandViewModel? favorite)
+        {
+            if (favorite == null || string.IsNullOrWhiteSpace(favorite.Command))
+            {
+                MessageBox.Show("No command selected.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            Clipboard.SetText(favorite.Command);
+            MessageBox.Show("Command copied to clipboard.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        public void RemoveFavorite(FavoriteCommandViewModel? favorite)
+        {
+            if (favorite == null)
+            {
+                MessageBox.Show("No command selected.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            Favorites.Remove(favorite);
+            SaveFavorites();
+            RefreshFavoriteTagFilters();
+        }
+
+        public void ClearFavorites()
+        {
+            if (Favorites.Count == 0)
+            {
+                MessageBox.Show("No favorites to clear.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                "Clear all favorites?",
+                "Command Wizard",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+
+            if (result != MessageBoxResult.Yes)
+            {
+                return;
+            }
+
+            Favorites.Clear();
+            SaveFavorites();
+            RefreshFavoriteTagFilters();
+        }
+
+        public void ExportFavorites()
+        {
+            if (Favorites.Count == 0)
+            {
+                MessageBox.Show("No favorites to export.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var dialog = new Microsoft.Win32.SaveFileDialog
+            {
+                Title = "Export Favorites",
+                Filter = "JSON files (*.json)|*.json|Text files (*.txt)|*.txt|All files (*.*)|*.*",
+                FileName = "favorites.json"
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            try
+            {
+                var filePath = dialog.FileName;
+                var extension = Path.GetExtension(filePath);
+                if (string.IsNullOrWhiteSpace(extension))
+                {
+                    filePath = filePath + ".json";
+                    extension = ".json";
+                }
+
+                if (string.Equals(extension, ".txt", StringComparison.OrdinalIgnoreCase))
+                {
+                    var lines = new System.Collections.Generic.List<string>();
+                    foreach (var favorite in Favorites)
+                    {
+                        if (!string.IsNullOrWhiteSpace(favorite.Tool))
+                        {
+                            lines.Add($"# tool: {favorite.Tool}");
+                        }
+                        if (!string.IsNullOrWhiteSpace(favorite.Action))
+                        {
+                            lines.Add($"# action: {favorite.Action}");
+                        }
+                        if (!string.IsNullOrWhiteSpace(favorite.Task))
+                        {
+                            lines.Add($"# task: {favorite.Task}");
+                        }
+                        if (!string.IsNullOrWhiteSpace(favorite.CreatedAtLocal))
+                        {
+                            lines.Add($"# saved: {favorite.CreatedAtLocal}");
+                        }
+                        lines.Add(favorite.Command ?? string.Empty);
+                        lines.Add(string.Empty);
+                    }
+
+                    File.WriteAllLines(filePath, lines);
+                }
+                else
+                {
+                    var records = Favorites.Select(f => new HistoryRecord
+                    {
+                        Tool = f.Tool ?? string.Empty,
+                        Action = f.Action ?? string.Empty,
+                        Task = f.Task ?? string.Empty,
+                        Command = f.Command ?? string.Empty,
+                        CreatedAtUtc = f.CreatedAtUtc
+                    }).ToList();
+
+                    var options = new JsonSerializerOptions { WriteIndented = true };
+                    File.WriteAllText(filePath, JsonSerializer.Serialize(records, options));
+                }
+                MessageBox.Show("Favorites exported.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Failed to export favorites: {ex.Message}",
+                    "Command Wizard",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        private void AddFavorite(string command)
+        {
+            var record = new FavoriteCommandViewModel
             {
                 Tool = SelectedTool?.Schema.Name ?? "",
                 Action = SelectedAction?.Name ?? "",
@@ -394,31 +756,251 @@ namespace CommandWizard.ViewModels
                 CreatedAtUtc = DateTime.UtcNow
             };
 
+            Favorites.Add(record);
+            UpdateFavoriteTagsForTool(SelectedTool);
+            SaveFavorites();
+            RefreshFavoriteTagFilters();
+        }
+
+        private void LoadFavorites()
+        {
             try
             {
-                var history = new System.Collections.Generic.List<HistoryRecord>();
-                if (File.Exists(_historyPath))
+                Directory.CreateDirectory(Path.GetDirectoryName(_historyPath) ?? AppContext.BaseDirectory);
+                if (!File.Exists(_historyPath))
                 {
-                    var json = File.ReadAllText(_historyPath);
-                    var loaded = JsonSerializer.Deserialize<System.Collections.Generic.List<HistoryRecord>>(json);
-                    if (loaded != null)
-                    {
-                        history = loaded;
-                    }
+                    return;
                 }
 
-                history.Add(record);
-                var options = new JsonSerializerOptions { WriteIndented = true };
-                File.WriteAllText(_historyPath, JsonSerializer.Serialize(history, options));
+                var json = File.ReadAllText(_historyPath);
+                var loaded = JsonSerializer.Deserialize<System.Collections.Generic.List<HistoryRecord>>(json);
+                if (loaded == null) return;
+
+                foreach (var record in loaded)
+                {
+                    var favorite = new FavoriteCommandViewModel
+                    {
+                        Tool = record.Tool ?? string.Empty,
+                        Action = record.Action ?? string.Empty,
+                        Task = record.Task ?? string.Empty,
+                        Command = record.Command ?? string.Empty,
+                        CreatedAtUtc = record.CreatedAtUtc
+                    };
+                    Favorites.Add(favorite);
+                }
+
+                UpdateFavoriteTagsForAll();
             }
             catch (Exception ex)
             {
+                AppLogger.Error("Favorites load failed.", ex);
                 MessageBox.Show(
-                    $"Failed to write history: {ex.Message}",
+                    $"Failed to load favorites: {ex.Message}",
                     "Command Wizard",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
             }
+        }
+
+        public void DiscardImportedSchema()
+        {
+            if (SelectedTool == null || !SelectedTool.IsImportedUnsaved)
+            {
+                MessageBox.Show("No imported schema to discard.", "Command Wizard", MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            var toRemove = SelectedTool;
+            Tools.Remove(toRemove);
+            SelectedTool = Tools.FirstOrDefault();
+            AppLogger.Info("Imported schema discarded.");
+            RefreshFavoriteTagFilters();
+        }
+
+        private static void ApplyImportExclusions(ToolSchema schema, System.Collections.Generic.IEnumerable<string>? excludedFlags)
+        {
+            if (excludedFlags == null) return;
+            var exclude = excludedFlags
+                .Where(flag => !string.IsNullOrWhiteSpace(flag))
+                .Select(flag => flag.Trim())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+            if (exclude.Count == 0) return;
+
+            var filtered = schema.Arguments.Where(arg =>
+                !exclude.Contains(arg.Flag) && (string.IsNullOrWhiteSpace(arg.Long) || !exclude.Contains(arg.Long))).ToList();
+
+            schema.Arguments.Clear();
+            foreach (var arg in filtered)
+            {
+                schema.Arguments.Add(arg);
+            }
+        }
+
+        private void RegisterTool(ToolSchemaViewModel tool)
+        {
+            tool.Tags.CollectionChanged += (_, __) => RefreshTagFilters();
+            foreach (var tag in tool.Tags)
+            {
+                tag.PropertyChanged += TagOnPropertyChanged;
+            }
+            tool.Tags.CollectionChanged += (_, __) =>
+            {
+                foreach (var tag in tool.Tags)
+                {
+                    tag.PropertyChanged -= TagOnPropertyChanged;
+                    tag.PropertyChanged += TagOnPropertyChanged;
+                }
+            };
+            RefreshTagFilters();
+            UpdateFavoriteTagsForTool(tool);
+        }
+
+        private void InitializeTagPresets()
+        {
+            var presets = (List<Models.TagPreset>)TagPresets;
+            presets.Clear();
+            presets.Add(new("Blue",   "#0D89C8"));
+            presets.Add(new("Cyan",   "#29B6F6"));
+            presets.Add(new("Green",  "#3FB950"));
+            presets.Add(new("Yellow", "#F0B429"));
+            presets.Add(new("Red",    "#F76C6C"));
+            presets.Add(new("Purple", "#9B5DE5"));
+            presets.Add(new("Gray",   "#ADB5BD"));
+        }
+
+        private void TagOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            RefreshTagFilters();
+            UpdateFavoriteTagsForAll();
+        }
+
+        private void RefreshTagFilters()
+        {
+            var current = SelectedTagFilter;
+            var tags = Tools
+                .SelectMany(t => t.Tags)
+                .Select(t => t.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name)
+                .ToList();
+
+            TagFilters.Clear();
+            TagFilters.Add("All");
+            foreach (var tag in tags)
+            {
+                TagFilters.Add(tag);
+            }
+
+            if (!TagFilters.Contains(current))
+            {
+                SelectedTagFilter = "All";
+            }
+            else if (SelectedTagFilter != current)
+            {
+                SelectedTagFilter = current;
+            }
+
+            ToolsView.Refresh();
+        }
+
+        private void UpdateFavoriteTagsForAll()
+        {
+            foreach (var tool in Tools)
+            {
+                UpdateFavoriteTagsForTool(tool);
+            }
+        }
+
+        private void UpdateFavoriteTagsForTool(ToolSchemaViewModel? tool)
+        {
+            if (tool == null) return;
+            foreach (var favorite in Favorites)
+            {
+                if (string.Equals(favorite.Tool, tool.ToolName, StringComparison.OrdinalIgnoreCase))
+                {
+                    favorite.SetTags(tool.Tags);
+                }
+            }
+            RefreshFavoriteTagFilters();
+        }
+
+        private void RefreshFavoriteTagFilters()
+        {
+            var current = SelectedFavoriteTagFilter;
+            var tags = Favorites
+                .SelectMany(f => f.Tags)
+                .Select(t => t.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .OrderBy(name => name)
+                .ToList();
+
+            FavoriteTagFilters.Clear();
+            FavoriteTagFilters.Add("All");
+            foreach (var tag in tags)
+            {
+                FavoriteTagFilters.Add(tag);
+            }
+
+            if (!FavoriteTagFilters.Contains(current))
+            {
+                SelectedFavoriteTagFilter = "All";
+            }
+            else if (SelectedFavoriteTagFilter != current)
+            {
+                SelectedFavoriteTagFilter = current;
+            }
+
+            FavoritesView.Refresh();
+        }
+
+        private bool FilterFavorite(object item)
+        {
+            if (item is not FavoriteCommandViewModel favorite) return true;
+            var search = FavoriteSearchText?.Trim();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var match = (favorite.Command ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (favorite.Tool ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (favorite.Action ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || (favorite.Task ?? string.Empty).Contains(search, StringComparison.OrdinalIgnoreCase);
+
+                if (!match) return false;
+            }
+            if (!string.IsNullOrWhiteSpace(SelectedFavoriteTagFilter) && SelectedFavoriteTagFilter != "All")
+            {
+                var hasTag = favorite.Tags.Any(t =>
+                    string.Equals(t.Name, SelectedFavoriteTagFilter, StringComparison.OrdinalIgnoreCase));
+                if (!hasTag) return false;
+            }
+
+            return true;
+        }
+
+        private bool FilterTool(object item)
+        {
+            if (item is not ToolSchemaViewModel tool) return true;
+
+            var search = ToolSearchText?.Trim();
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                var match = tool.ToolName.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || tool.ToolDescription.Contains(search, StringComparison.OrdinalIgnoreCase)
+                    || tool.DisplayName.Contains(search, StringComparison.OrdinalIgnoreCase);
+
+                if (!match) return false;
+            }
+
+            if (!string.IsNullOrWhiteSpace(SelectedTagFilter) && SelectedTagFilter != "All")
+            {
+                var hasTag = tool.Tags.Any(t =>
+                    string.Equals(t.Name, SelectedTagFilter, StringComparison.OrdinalIgnoreCase));
+                if (!hasTag) return false;
+            }
+
+            return true;
         }
 
         private void AttachToolHandlers(ToolSchemaViewModel? tool)
@@ -462,14 +1044,44 @@ namespace CommandWizard.ViewModels
         private void ToolOnPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
         {
             UpdateCommandPreview();
+            ToolsView.Refresh();
+            UpdateFavoriteTagsForAll();
+        }
+
+        private void SaveFavorites()
+        {
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(_historyPath) ?? AppContext.BaseDirectory);
+                var records = Favorites.Select(f => new HistoryRecord
+                {
+                    Tool = f.Tool ?? string.Empty,
+                    Action = f.Action ?? string.Empty,
+                    Task = f.Task ?? string.Empty,
+                    Command = f.Command ?? string.Empty,
+                    CreatedAtUtc = f.CreatedAtUtc
+                }).ToList();
+
+                var options = new JsonSerializerOptions { WriteIndented = true };
+                File.WriteAllText(_historyPath, JsonSerializer.Serialize(records, options));
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Error("Favorites save failed.", ex);
+                MessageBox.Show(
+                    $"Failed to save favorites: {ex.Message}",
+                    "Command Wizard",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
         }
 
         private sealed class HistoryRecord
         {
-            public string Tool { get; set; } = string.Empty;
-            public string Action { get; set; } = string.Empty;
-            public string Task { get; set; } = string.Empty;
-            public string Command { get; set; } = string.Empty;
+            public string? Tool { get; set; }
+            public string? Action { get; set; }
+            public string? Task { get; set; }
+            public string? Command { get; set; }
             public DateTime CreatedAtUtc { get; set; }
         }
     }

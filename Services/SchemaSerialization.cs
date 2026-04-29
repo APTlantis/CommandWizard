@@ -26,6 +26,7 @@ namespace CommandWizard.Services
             {
                 schema.Name = toolTable.TryGetValue("name", out var nameObj) ? nameObj?.ToString() ?? "" : "";
                 schema.Description = toolTable.TryGetValue("description", out var descObj) ? descObj?.ToString() ?? "" : "";
+                schema.Notes = toolTable.TryGetValue("notes", out var notesObj) ? notesObj?.ToString() ?? "" : "";
                 schema.ExecutablePath = toolTable.TryGetValue("executable_path", out var pathObj) ? pathObj?.ToString() ?? "" : "";
                 schema.InstalledName = toolTable.TryGetValue("installed_name", out var installedObj) ? installedObj?.ToString() ?? "" : "";
             }
@@ -85,6 +86,22 @@ namespace CommandWizard.Services
                 }
             }
 
+            if (model.TryGetValue("tags", out var tagsObj) && tagsObj is TomlTableArray tagsArray)
+            {
+                foreach (TomlTable tagTable in tagsArray)
+                {
+                    var tag = new SchemaTag
+                    {
+                        Name = tagTable.TryGetValue("name", out var nameObj) ? nameObj?.ToString() ?? "" : "",
+                        Color = tagTable.TryGetValue("color", out var colorObj) ? colorObj?.ToString() ?? "#7A7A7A" : "#7A7A7A"
+                    };
+                    if (!string.IsNullOrWhiteSpace(tag.Name))
+                    {
+                        schema.Tags.Add(tag);
+                    }
+                }
+            }
+
             if (string.IsNullOrWhiteSpace(schema.Name))
             {
                 throw new InvalidOperationException("Schema is missing tool.name.");
@@ -101,6 +118,10 @@ namespace CommandWizard.Services
                 ["name"] = schema.Name,
                 ["description"] = schema.Description
             };
+            if (!string.IsNullOrWhiteSpace(schema.Notes))
+            {
+                toolTable["notes"] = schema.Notes;
+            }
             if (!string.IsNullOrWhiteSpace(schema.ExecutablePath))
             {
                 toolTable["executable_path"] = schema.ExecutablePath;
@@ -158,6 +179,21 @@ namespace CommandWizard.Services
                     });
                 }
                 root["parameters"] = parameters;
+            }
+
+            if (schema.Tags.Count > 0)
+            {
+                var tags = new TomlTableArray();
+                foreach (var tag in schema.Tags)
+                {
+                    var entry = new TomlTable
+                    {
+                        ["name"] = tag.Name,
+                        ["color"] = string.IsNullOrWhiteSpace(tag.Color) ? "#7A7A7A" : tag.Color
+                    };
+                    tags.Add(entry);
+                }
+                root["tags"] = tags;
             }
 
             return Toml.FromModel(root);

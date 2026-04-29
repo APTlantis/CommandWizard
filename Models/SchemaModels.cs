@@ -1,19 +1,85 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 
 namespace CommandWizard.Models
 {
+    public sealed record TagPreset(string Name, string Color)
+    {
+        public Brush Brush { get; } = new SolidColorBrush(
+            (System.Windows.Media.Color)ColorConverter.ConvertFromString(Color));
+    }
+
+
     public sealed class ToolSchema
     {
         public string Name { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
+        public string Notes { get; set; } = string.Empty;
         public string SourcePath { get; set; } = string.Empty;
         public string ExecutablePath { get; set; } = string.Empty;
         public string InstalledName { get; set; } = string.Empty;
         public ObservableCollection<SchemaAction> Actions { get; set; } = new();
         public ObservableCollection<SchemaArgument> Arguments { get; set; } = new();
         public ObservableCollection<SchemaParameter> Parameters { get; set; } = new();
+        public ObservableCollection<SchemaTag> Tags { get; set; } = new();
+    }
+
+    public sealed class SchemaTag : INotifyPropertyChanged
+    {
+        private string _name = string.Empty;
+        private string _color = "#7A7A7A";
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public string Name
+        {
+            get => _name;
+            set
+            {
+                if (_name == value) return;
+                _name = value;
+                OnPropertyChanged();
+            }
+        }
+
+        public string Color
+        {
+            get => _color;
+            set
+            {
+                if (_color == value) return;
+                _color = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ColorBrush));
+            }
+        }
+
+        public Brush ColorBrush => TryGetBrush(Color) ?? Brushes.Gray;
+
+        private static Brush? TryGetBrush(string color)
+        {
+            if (string.IsNullOrWhiteSpace(color)) return null;
+            try
+            {
+                var converted = ColorConverter.ConvertFromString(color);
+                if (converted is Color parsed)
+                {
+                    return new SolidColorBrush(parsed);
+                }
+            }
+            catch
+            {
+            }
+
+            return null;
+        }
+
+        private void OnPropertyChanged([CallerMemberName] string? propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
     }
 
     public sealed class SchemaAction : INotifyPropertyChanged

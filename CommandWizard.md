@@ -313,6 +313,59 @@ Detected arguments are converted into structured metadata which can then be refi
 
 ---
 
+# Current Features (V1 Snapshot)
+
+The current app ships with a practical subset of the long‑term vision.
+
+### Help‑Based Schema Import
+
+You can import a schema by running a tool’s help output directly in the app.
+
+* **File → Import From Help...** opens a dialog.
+* Enter a command (for example, `ffmpeg`, `bun`, `bon`, `bonnet`) and a help argument (`--help` by default).
+* The app captures help output, parses flags and actions, and creates a schema in memory.
+* Review in the **Schema Editor** and click **Save Schema** to write a TOML file.
+
+### Tooltip Descriptions
+
+Parsed flag descriptions appear as hover tooltips in the Wizard.
+If a help entry is incorrect or incomplete, update the description in the **Schema Editor** and the tooltip updates automatically.
+
+### File‑Based Schemas
+
+Schemas are stored as `.toml` files in:
+
+```
+schemas/
+```
+
+They are loaded on app startup and can be edited at any time.
+
+### Command History (JSON)
+
+Generated commands are appended to a local JSON file:
+
+```
+history.json
+```
+
+This creates a lightweight personal command history without requiring a database.
+
+---
+
+# WinAppSDK Init (CLI)
+
+If you want to bootstrap a similar WinAppSDK desktop app using the official Microsoft CLI flow:
+
+```
+dotnet new --install Microsoft.WindowsAppSDK.Templates
+dotnet new winappsdk -n CommandWizard
+```
+
+This project follows that template style (WPF + WinAppSDK conventions), but does not require any structural migration for V1.
+
+---
+
 # Command Explanation Mode
 
 The wizard can also explain commands.

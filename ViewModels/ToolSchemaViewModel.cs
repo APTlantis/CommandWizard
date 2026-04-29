@@ -8,12 +8,18 @@ namespace CommandWizard.ViewModels
 {
     public sealed class ToolSchemaViewModel : ViewModelBase
     {
+        private bool _isImportedUnsaved;
+
         public ToolSchemaViewModel(ToolSchema schema)
         {
             Schema = schema;
             Actions = schema.Actions;
             Options = new ObservableCollection<OptionItemViewModel>();
             Parameters = new ObservableCollection<ParameterItemViewModel>();
+
+            Actions.CollectionChanged += (_, __) => OnPropertyChanged(nameof(ImportSummary));
+            Schema.Arguments.CollectionChanged += (_, __) => OnPropertyChanged(nameof(ImportSummary));
+            Schema.Parameters.CollectionChanged += (_, __) => OnPropertyChanged(nameof(ImportSummary));
 
             foreach (var arg in schema.Arguments)
             {
@@ -30,6 +36,22 @@ namespace CommandWizard.ViewModels
         public ObservableCollection<SchemaAction> Actions { get; }
         public ObservableCollection<OptionItemViewModel> Options { get; }
         public ObservableCollection<ParameterItemViewModel> Parameters { get; }
+        public ObservableCollection<SchemaTag> Tags => Schema.Tags;
+
+        public bool IsImportedUnsaved
+        {
+            get => _isImportedUnsaved;
+            set
+            {
+                if (_isImportedUnsaved == value) return;
+                _isImportedUnsaved = value;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(ImportSummary));
+            }
+        }
+
+        public string ImportSummary =>
+            $"{Actions.Count} actions, {Schema.Arguments.Count} flags, {Schema.Parameters.Count} parameters";
 
         public string ToolName
         {
@@ -54,6 +76,17 @@ namespace CommandWizard.ViewModels
                 Schema.Description = value;
                 OnPropertyChanged();
                 OnPropertyChanged(nameof(DisplayName));
+            }
+        }
+
+        public string Notes
+        {
+            get => Schema.Notes;
+            set
+            {
+                if (Schema.Notes == value) return;
+                Schema.Notes = value;
+                OnPropertyChanged();
             }
         }
 

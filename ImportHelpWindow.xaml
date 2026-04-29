@@ -1,0 +1,99 @@
+<Window x:Class="CommandWizard.ImportHelpWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Style="{StaticResource MaterialDesignWindow}"
+        Title="Import From Help" Height="520" Width="620" ResizeMode="NoResize" WindowStartupLocation="CenterOwner">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />  <!-- 0: import mode -->
+            <RowDefinition Height="Auto" />  <!-- 1: advanced sources checkbox -->
+            <RowDefinition Height="Auto" />  <!-- 2: run command panel -->
+            <RowDefinition Height="Auto" />  <!-- 3: paste text panel -->
+            <RowDefinition Height="*"    />  <!-- 4: preview / flag exclusion -->
+            <RowDefinition Height="Auto" />  <!-- 5: dialog buttons -->
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="140" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Import Mode" VerticalAlignment="Center" />
+        <StackPanel Grid.Row="0" Grid.Column="1" Orientation="Horizontal" Margin="0,0,0,6">
+            <RadioButton Content="Run help command" GroupName="ImportMode" IsChecked="True" Checked="OnRunModeChecked" />
+            <RadioButton Content="Paste help text" GroupName="ImportMode" Margin="12,0,0,0" Checked="OnPasteModeChecked" />
+        </StackPanel>
+
+        <CheckBox Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="2"
+                  Content="Use advanced import sources (completions)"
+                  IsChecked="{Binding UseAdvancedSources}"
+                  Margin="0,2,0,10" />
+
+        <StackPanel Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="2" x:Name="RunCommandPanel">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Command" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Text="{Binding CommandText, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+
+            <Grid Margin="0,12,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="140" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Grid.Column="0" Text="Help Args" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1" Text="{Binding HelpArgs, UpdateSourceTrigger=PropertyChanged}" />
+            </Grid>
+        </StackPanel>
+
+        <StackPanel Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="2" x:Name="PasteTextPanel" Visibility="Collapsed">
+            <TextBlock Text="Command" />
+            <TextBox Text="{Binding CommandText, UpdateSourceTrigger=PropertyChanged}" />
+            <TextBlock Text="Help Text" Margin="0,12,0,0" />
+        </StackPanel>
+
+        <Grid Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Margin="0,10,0,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <TextBox Grid.Row="0" x:Name="HelpTextBox"
+                     Visibility="Collapsed"
+                     AcceptsReturn="True"
+                     VerticalScrollBarVisibility="Auto"
+                     HorizontalScrollBarVisibility="Auto"
+                     TextWrapping="NoWrap"
+                     Height="120"
+                     Text="{Binding HelpText, UpdateSourceTrigger=PropertyChanged}" />
+
+            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,8" HorizontalAlignment="Right">
+                <Button Width="110" Content="Preview Flags" Click="OnPreviewFlagsClicked" />
+            </StackPanel>
+
+            <GroupBox Grid.Row="2" Header="Exclude Flags (uncheck to skip)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding FlagOptions}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsIncluded, UpdateSourceTrigger=PropertyChanged}"
+                                          Content="{Binding Display}"
+                                          Margin="0,4,0,0" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </GroupBox>
+        </Grid>
+
+        <StackPanel Grid.Row="5" Grid.Column="0" Grid.ColumnSpan="2"
+                    Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+            <Button Width="90" Margin="0,0,8,0" Content="Cancel" Click="OnCancelClicked" />
+            <Button Width="90" Content="Import" Style="{StaticResource PrimaryButtonStyle}" Click="OnImportClicked" />
+        </StackPanel>
+    </Grid>
+</Window>

@@ -1,7 +1,7 @@
-# Aptlantis Command Wizard MVP Plan (Small App, TOML, Single‑Line Preview)
+# Aptlantis Command Wizard V1 Plan (Delivered)
 
 **Summary**
-Build a small WPF app that loads TOML command schemas, guides the user through tool/action/options/parameters, and outputs a single‑line command preview. Include a simple tool selector and persist command history to JSON.
+V1 has been implemented: the app loads TOML schemas, guides users through tool/action/options/parameters, and outputs a single‑line command preview. It also supports help‑based schema import with tooltip descriptions and persists command history to JSON.
 
 **Key Changes**
 1. **Schema Loading (TOML)**
@@ -27,6 +27,11 @@ Build a small WPF app that loads TOML command schemas, guides the user through t
    - On “Generate” or “Copy,” append a history record to a local JSON file (e.g., `history.json`) containing tool, task label (optional), and command string.
    - Keep history append‑only for v1; no UI to browse history yet (unless trivial to add).
 
+5. **Help‑Based Schema Import**
+   - Import tool schemas from `--help` output.
+   - Parse flags and commands into editable schema entries.
+   - Show flag descriptions as hover tooltips in the Wizard UI.
+
 **Tests**
 1. Schema parsing: valid TOML parses into model.
 2. Schema parsing: invalid TOML yields a user‑visible error without crashing.
@@ -38,3 +43,8 @@ Build a small WPF app that loads TOML command schemas, guides the user through t
 - Schemas are stored locally in `A:\AptWeb\zypper-operations\CommandWizard\schemas\`.
 - Command preview is single‑line only for v1.
 - History persistence is JSON in app directory; no migration or versioning yet.
+
+**Known Limitations**
+- No positional parameter parsing from `Usage:` lines yet.
+- No recursive subcommand probing (e.g., `tool subcommand --help`).
+- Help text editing is done via the Schema Editor, not inline in the Wizard.

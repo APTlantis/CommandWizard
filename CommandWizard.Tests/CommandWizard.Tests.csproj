@@ -1,10 +1,14 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0-windows7.0</TargetFramework>
+    <TargetFramework>net10.0-windows10.0.26100</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
+    <UseWPF>true</UseWPF>
+    <UseCommonOutputDirectory>false</UseCommonOutputDirectory>
+    <BuildProjectReferences>false</BuildProjectReferences>
+    <GetCopyToOutputDirectoryItemsFromProjectReferences>false</GetCopyToOutputDirectoryItemsFromProjectReferences>
   </PropertyGroup>
 
   <ItemGroup>
@@ -15,7 +19,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\\CommandWizard.csproj" />
+    <Reference Include="CommandWizard">
+      <HintPath>..\\bin\\Release\\net10.0-windows10.0.26100.0\\CommandWizard.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 
   <ItemGroup>

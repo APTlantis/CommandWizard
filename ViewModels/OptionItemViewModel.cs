@@ -16,6 +16,7 @@ namespace CommandWizard.ViewModels
         public SchemaArgument Argument { get; }
 
         public string DisplayName => string.IsNullOrWhiteSpace(Argument.Long) ? Argument.Flag : Argument.Long;
+        public string Description => Argument.Description;
 
         public bool IsBoolean => string.Equals(Argument.Type, "boolean", System.StringComparison.OrdinalIgnoreCase);
 
@@ -46,6 +47,10 @@ namespace CommandWizard.ViewModels
             if (e.PropertyName == nameof(SchemaArgument.Long) || e.PropertyName == nameof(SchemaArgument.Flag))
             {
                 OnPropertyChanged(nameof(DisplayName));
+            }
+            if (e.PropertyName == nameof(SchemaArgument.Description))
+            {
+                OnPropertyChanged(nameof(Description));
             }
             if (e.PropertyName == nameof(SchemaArgument.Type))
             {

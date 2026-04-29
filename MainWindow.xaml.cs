@@ -83,6 +83,35 @@ namespace CommandWizard
             _viewModel.AddNewSchema();
         }
 
+        private void OnImportFromHelpClicked(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var dialog = new ImportHelpWindow { Owner = this };
+                if (dialog.ShowDialog() != true)
+                {
+                    return;
+                }
+
+                var imported = dialog.UsePasteText
+                    ? _viewModel.ImportSchemaFromHelpText(dialog.CommandText, dialog.HelpText, dialog.UseAdvancedSources, dialog.ExcludedFlags)
+                    : _viewModel.ImportSchemaFromHelp(dialog.CommandText, dialog.HelpArgs, dialog.UseAdvancedSources, dialog.ExcludedFlags);
+
+                if (imported)
+                {
+                    SchemaEditorTab.IsSelected = true;
+                }
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show(
+                    $"Import failed: {ex.Message}",
+                    "Import Schema",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
         private void OnAddActionClicked(object sender, RoutedEventArgs e)
         {
             _viewModel.AddAction();
@@ -113,6 +142,57 @@ namespace CommandWizard
             _viewModel.RemoveParameter();
         }
 
+        private void OnAddTagClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.AddTag();
+        }
+
+        private void OnRemoveTagClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.RemoveTag();
+        }
+
+        private void OnTagColorSwatchClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is FrameworkElement { Tag: string color })
+                _viewModel.ApplyTagColor(color);
+        }
+
+        private void OnEditOptionClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement element)
+            {
+                return;
+            }
+
+            if (element.DataContext is not ViewModels.OptionItemViewModel option)
+            {
+                return;
+            }
+
+            var dialog = new OptionEditWindow
+            {
+                Owner = this,
+                Flag = option.Argument.Flag,
+                LongFlag = option.Argument.Long,
+                Description = option.Argument.Description
+            };
+
+            if (dialog.ShowDialog() != true)
+            {
+                return;
+            }
+
+            option.Argument.Flag = dialog.Flag;
+            option.Argument.Long = dialog.LongFlag;
+            option.Argument.Description = dialog.Description;
+        }
+
+        private void OnDiscardImportedClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.DiscardImportedSchema();
+        }
+
         private void OnCopyToolClicked(object sender, RoutedEventArgs e)
         {
             _viewModel.CopyToolToAppDirectory();
@@ -121,6 +201,26 @@ namespace CommandWizard
         private void OnAddToolsDirToPathClicked(object sender, RoutedEventArgs e)
         {
             _viewModel.AddToolsDirectoryToPath();
+        }
+
+        private void OnViewLogClicked(object sender, RoutedEventArgs e)
+        {
+            var logPath = Services.AppLogger.LogPath;
+            if (!File.Exists(logPath))
+            {
+                MessageBox.Show(
+                    $"No log file found yet. It will appear after the first import or save.\n\nPath: {logPath}",
+                    "Command Wizard",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = logPath,
+                UseShellExecute = true
+            });
         }
 
         private void OnExitClicked(object sender, RoutedEventArgs e)
@@ -135,6 +235,51 @@ namespace CommandWizard
                 "About",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
+        }
+
+        private void OnAddFavoriteClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.AddFavoriteFromPaste();
+        }
+
+        private void OnCopyFavoriteClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement element)
+            {
+                return;
+            }
+
+            if (element.DataContext is not ViewModels.FavoriteCommandViewModel favorite)
+            {
+                return;
+            }
+
+            _viewModel.CopyFavorite(favorite);
+        }
+
+        private void OnRemoveFavoriteClicked(object sender, RoutedEventArgs e)
+        {
+            if (sender is not FrameworkElement element)
+            {
+                return;
+            }
+
+            if (element.DataContext is not ViewModels.FavoriteCommandViewModel favorite)
+            {
+                return;
+            }
+
+            _viewModel.RemoveFavorite(favorite);
+        }
+
+        private void OnClearFavoritesClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.ClearFavorites();
+        }
+
+        private void OnExportFavoritesClicked(object sender, RoutedEventArgs e)
+        {
+            _viewModel.ExportFavorites();
         }
     }
 }

@@ -4,11 +4,14 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:CommandWizard"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         mc:Ignorable="d"
+        Style="{StaticResource MaterialDesignWindow}"
         Title="Aptlantis Command Wizard" Height="720" Width="1080" MinHeight="600" MinWidth="900">
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
         <local:InverseBooleanToVisibilityConverter x:Key="InverseBooleanToVisibilityConverter" />
+        <local:StringNullOrEmptyToVisibilityConverter x:Key="StringNullOrEmptyToVisibilityConverter" />
     </Window.Resources>
     <Window.CommandBindings>
         <CommandBinding Command="{x:Static local:MainWindow.CopyCommand}"
@@ -30,153 +33,43 @@
     </Window.InputBindings>
 
     <DockPanel Margin="16">
-        <Menu DockPanel.Dock="Top">
-            <MenuItem Header="_File">
-                <MenuItem Header="New Schema" Click="OnNewSchemaClicked" />
-                <Separator />
-                <MenuItem Header="Save Schema" Click="OnSaveSchemaClicked" />
-                <Separator />
-                <MenuItem Header="Exit" Click="OnExitClicked" />
-            </MenuItem>
-            <MenuItem Header="_Edit">
-                <MenuItem Header="Copy Command" Command="{x:Static local:MainWindow.CopyCommand}" InputGestureText="Ctrl+C" />
-                <MenuItem Header="Generate Command" Command="{x:Static local:MainWindow.GenerateCommand}" InputGestureText="Ctrl+G" />
-            </MenuItem>
-            <MenuItem Header="_Help">
-                <MenuItem Header="Help" Command="{x:Static local:MainWindow.HelpCommand}" InputGestureText="F1" />
-                <Separator />
-                <MenuItem Header="About" Click="OnAboutClicked" />
-            </MenuItem>
-        </Menu>
+        <Menu DockPanel.Dock="Top"/>
 
-        <TabControl>
-            <TabItem Header="Wizard">
-                <Grid Margin="8">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="280" />
-                        <ColumnDefinition Width="16" />
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto" />
-                        <RowDefinition Height="*" />
-                        <RowDefinition Height="Auto" />
-                    </Grid.RowDefinitions>
-
-                    <TextBlock Grid.Column="0" Grid.Row="0" Text="Tools" FontSize="16" FontWeight="SemiBold" />
-                    <ListBox Grid.Column="0" Grid.Row="1"
-                             ItemsSource="{Binding Tools}"
-                             SelectedItem="{Binding SelectedTool}"
-                             Margin="0,8,0,0">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <StackPanel Margin="0,4,0,4">
-                                    <TextBlock Text="{Binding DisplayName}" />
-                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
-                                        <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" Margin="0,3,6,0" />
-                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-
-                    <ScrollViewer Grid.Column="2" Grid.Row="1" VerticalScrollBarVisibility="Auto">
-                        <StackPanel>
-                            <TextBlock Text="Command Setup" FontSize="16" FontWeight="SemiBold" />
-
-                            <StackPanel Margin="0,12,0,0">
-                                <TextBlock Text="Task Label (optional)" />
-                                <TextBox Text="{Binding TaskLabel, UpdateSourceTrigger=PropertyChanged}" />
-                            </StackPanel>
-
-                            <StackPanel Margin="0,12,0,0">
-                                <TextBlock Text="Action (optional)" />
-                                <ComboBox ItemsSource="{Binding SelectedTool.Actions}"
-                                          SelectedItem="{Binding SelectedAction}"
-                                          DisplayMemberPath="Name" />
-                            </StackPanel>
-
-                            <StackPanel Margin="0,12,0,0">
-                                <TextBlock Text="Options" />
-                                <ItemsControl ItemsSource="{Binding SelectedTool.Options}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,6,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="Auto" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <CheckBox Grid.Column="0"
-                                                          VerticalAlignment="Center"
-                                                          IsChecked="{Binding IsSelected}"
-                                                          Visibility="{Binding IsBoolean, Converter={StaticResource BooleanToVisibilityConverter}}" />
-                                                <TextBox Grid.Column="0"
-                                                         Width="200"
-                                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
-                                                         Visibility="{Binding IsBoolean, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
-                                                <TextBlock Grid.Column="1"
-                                                           Margin="12,0,0,0"
-                                                           Text="{Binding DisplayName}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-
-                            <StackPanel Margin="0,12,0,0">
-                                <TextBlock Text="Parameters" />
-                                <ItemsControl ItemsSource="{Binding SelectedTool.Parameters}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,6,0,0">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180" />
-                                                    <ColumnDefinition Width="*" />
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding Parameter.Name}" />
-                                                <TextBox Grid.Column="1"
-                                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </StackPanel>
-                    </ScrollViewer>
-
-                    <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2"
-                            BorderBrush="#33000000" BorderThickness="1" Padding="12" Margin="0,16,0,0">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*" />
-                                <ColumnDefinition Width="Auto" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Command Preview" FontWeight="SemiBold" />
-                                <TextBox Text="{Binding CommandPreview, Mode=OneWay}" IsReadOnly="True" Margin="0,6,0,0" />
-                            </StackPanel>
-                            <Button Grid.Column="1" Content="Copy" Width="100" Margin="12,0,0,0"
-                                    Command="{x:Static local:MainWindow.CopyCommand}" />
-                            <Button Grid.Column="2" Content="Generate" Width="100" Margin="12,0,0,0"
-                                    Command="{x:Static local:MainWindow.GenerateCommand}" />
-                        </Grid>
-                    </Border>
-                </Grid>
-            </TabItem>
-
-            <TabItem Header="Schema Editor">
+        <TabControl x:Name="MainTabs">
+            <TabItem x:Name="SchemaEditorTab" Header="Schema Editor">
                 <Grid Margin="8">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="16" />
                         <ColumnDefinition Width="2*" />
                     </Grid.ColumnDefinitions>
+                    <Rectangle Grid.Column="1" Width="1" HorizontalAlignment="Center"
+                               Fill="{StaticResource BorderBrush}" />
 
-                    <StackPanel Grid.Column="0">
-                        <TextBlock Text="Schemas" FontSize="16" FontWeight="SemiBold" />
-                        <ListBox ItemsSource="{Binding Tools}"
+                    <Grid Grid.Column="0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <StackPanel Grid.Row="0">
+                            <TextBlock Text="Schemas" FontSize="16" FontWeight="SemiBold" />
+                            <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                <Grid Width="180">
+                                    <TextBox Text="{Binding ToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                                    <TextBlock Text="Search tools..."
+                                               Margin="6,4,0,0"
+                                               Foreground="{StaticResource TextMutedBrush}"
+                                               IsHitTestVisible="False"
+                                               Visibility="{Binding ToolSearchText, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
+                                </Grid>
+                                <ComboBox Width="140" Margin="8,0,0,0"
+                                          ItemsSource="{Binding TagFilters}"
+                                          SelectedItem="{Binding SelectedTagFilter}" />
+                            </StackPanel>
+                        </StackPanel>
+                        <ListBox Grid.Row="1"
+                                 ItemsSource="{Binding ToolsView}"
                                  SelectedItem="{Binding SelectedTool}"
                                  Margin="0,8,0,0">
                             <ListBox.ItemTemplate>
@@ -187,16 +80,41 @@
                                             <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" Margin="0,3,6,0" />
                                             <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" />
                                         </StackPanel>
+                                        <ItemsControl ItemsSource="{Binding Tags}" Margin="0,6,0,0">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Border Background="{Binding ColorBrush}" CornerRadius="10" Padding="6,2" Margin="0,0,6,6">
+                                                        <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11" />
+                                                    </Border>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
                                     </StackPanel>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <Button Content="New Schema" Margin="0,12,0,0" Click="OnNewSchemaClicked" />
-                    </StackPanel>
+                        <StackPanel Grid.Row="2" Margin="0,12,0,0">
+                            <Button Content="New Schema" Click="OnNewSchemaClicked" />
+                            <Button Content="Import From Help..." Margin="0,8,0,0" Click="OnImportFromHelpClicked" />
+                        </StackPanel>
+                    </Grid>
 
                     <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
                         <StackPanel>
                             <TextBlock Text="Schema Details" FontSize="16" FontWeight="SemiBold" />
+
+                            <Border Background="#FFF4CE" BorderBrush="#FFCC00" BorderThickness="1" Padding="8" Margin="0,8,0,0"
+                                    Visibility="{Binding SelectedTool.IsImportedUnsaved, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Text="Imported (unsaved). " FontWeight="SemiBold" />
+                                    <TextBlock Text="{Binding SelectedTool.ImportSummary}" />
+                                </StackPanel>
+                            </Border>
 
                             <StackPanel Margin="0,12,0,0">
                                 <TextBlock Text="Tool Name" />
@@ -290,14 +208,359 @@
                                 </StackPanel>
                             </Expander>
 
+                            <Expander Header="Tags" IsExpanded="True" Margin="0,12,0,0">
+                                <StackPanel Margin="0,6,0,0">
+                                    <!-- Tag list: name editable, color shown as a dot -->
+                                    <DataGrid ItemsSource="{Binding SelectedTool.Tags}"
+                                              SelectedItem="{Binding SelectedTagForEdit}"
+                                              AutoGenerateColumns="False"
+                                              CanUserAddRows="False"
+                                              CanUserDeleteRows="False"
+                                              HeadersVisibility="Column"
+                                              MaxHeight="160"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                              ScrollViewer.VerticalScrollBarVisibility="Auto">
+                                        <DataGrid.Columns>
+                                            <DataGridTextColumn Header="Name"
+                                                                Binding="{Binding Name, UpdateSourceTrigger=PropertyChanged}"
+                                                                Width="*" />
+                                            <DataGridTemplateColumn Header="" Width="36">
+                                                <DataGridTemplateColumn.CellTemplate>
+                                                    <DataTemplate>
+                                                        <Ellipse Width="16" Height="16"
+                                                                 Fill="{Binding ColorBrush}"
+                                                                 HorizontalAlignment="Center"
+                                                                 VerticalAlignment="Center" />
+                                                    </DataTemplate>
+                                                </DataGridTemplateColumn.CellTemplate>
+                                            </DataGridTemplateColumn>
+                                        </DataGrid.Columns>
+                                    </DataGrid>
+
+                                    <!-- Color swatch picker: click to apply to selected tag -->
+                                    <StackPanel Margin="0,8,0,0">
+                                        <TextBlock Text="Pick color for selected tag"
+                                                   FontSize="11"
+                                                   Foreground="{StaticResource TextMutedBrush}"
+                                                   Margin="0,0,0,6"/>
+                                        <ItemsControl ItemsSource="{Binding TagPresets}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Button Width="28" Height="28" Margin="0,0,6,0"
+                                                            ToolTip="{Binding Name}"
+                                                            Tag="{Binding Color}"
+                                                            Click="OnTagColorSwatchClicked">
+                                                        <Button.Template>
+                                                            <ControlTemplate TargetType="Button">
+                                                                <Grid>
+                                                                    <Ellipse Width="22" Height="22"
+                                                                             Fill="{Binding Brush}"
+                                                                             Stroke="{StaticResource BorderBrush}"
+                                                                             StrokeThickness="2"/>
+                                                                    <Ellipse x:Name="Hover" Width="22" Height="22"
+                                                                             Fill="White" Opacity="0"/>
+                                                                </Grid>
+                                                                <ControlTemplate.Triggers>
+                                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                                        <Setter TargetName="Hover" Property="Opacity" Value="0.15"/>
+                                                                    </Trigger>
+                                                                    <Trigger Property="IsPressed" Value="True">
+                                                                        <Setter TargetName="Hover" Property="Opacity" Value="0.3"/>
+                                                                    </Trigger>
+                                                                </ControlTemplate.Triggers>
+                                                            </ControlTemplate>
+                                                        </Button.Template>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+
+                                    <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                        <Button Content="Add Tag" Width="100" Click="OnAddTagClicked" />
+                                        <Button Content="Remove" Width="90" Margin="8,0,0,0" Click="OnRemoveTagClicked" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Expander>
+
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock Text="Notes" />
+                                <TextBox Text="{Binding SelectedTool.Notes, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True"
+                                         Height="120"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto" />
+                            </StackPanel>
+
                             <StackPanel Orientation="Horizontal" Margin="0,16,0,0">
                                 <Button Content="Save Schema" Width="120" Click="OnSaveSchemaClicked" />
+                                <Button Content="Discard Imported Schema" Width="170" Margin="8,0,0,0"
+                                        Visibility="{Binding SelectedTool.IsImportedUnsaved, Converter={StaticResource BooleanToVisibilityConverter}}"
+                                        Click="OnDiscardImportedClicked" />
+                                <Button Content="View Log" Width="110" Margin="8,0,0,0" Click="OnViewLogClicked" />
                                 <Button Content="Copy Tool to App Dir" Width="160" Margin="8,0,0,0" Click="OnCopyToolClicked" />
                                 <Button Content="Add Tools Dir to PATH" Width="170" Margin="8,0,0,0" Click="OnAddToolsDirToPathClicked" />
                                 <TextBlock Text="{Binding SelectedTool.SourcePath}" Margin="12,4,0,0" />
                             </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="WizardTab" Header="Wizard">
+                <Grid Margin="8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="280" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Rectangle Grid.Column="1" Grid.RowSpan="3" Width="1" HorizontalAlignment="Center"
+                               Fill="{StaticResource BorderBrush}" />
+
+                    <StackPanel Grid.Column="0" Grid.Row="0">
+                        <TextBlock Text="Tools" FontSize="16" FontWeight="SemiBold" />
+                        <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                            <Grid Width="180">
+                                <TextBox Text="{Binding ToolSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                                <TextBlock Text="Search tools..."
+                                           Margin="6,4,0,0"
+                                           Foreground="{StaticResource TextMutedBrush}"
+                                           IsHitTestVisible="False"
+                                           Visibility="{Binding ToolSearchText, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
+                            </Grid>
+                            <ComboBox Width="140" Margin="8,0,0,0"
+                                      ItemsSource="{Binding TagFilters}"
+                                      SelectedItem="{Binding SelectedTagFilter}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <ListBox Grid.Column="0" Grid.Row="1"
+                             ItemsSource="{Binding ToolsView}"
+                             SelectedItem="{Binding SelectedTool}"
+                             Margin="0,8,0,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <StackPanel Margin="0,4,0,4">
+                                    <TextBlock Text="{Binding DisplayName}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                        <Ellipse Width="8" Height="8" Fill="{Binding StatusBrush}" Margin="0,3,6,0" />
+                                        <TextBlock Text="{Binding StatusText}" Foreground="{Binding StatusBrush}" />
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Tags}" Margin="0,6,0,0">
+                                        <ItemsControl.ItemsPanel>
+                                            <ItemsPanelTemplate>
+                                                <WrapPanel />
+                                            </ItemsPanelTemplate>
+                                        </ItemsControl.ItemsPanel>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Background="{Binding ColorBrush}" CornerRadius="10" Padding="6,2" Margin="0,0,6,6">
+                                                    <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11" />
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <ScrollViewer Grid.Column="2" Grid.Row="1" VerticalScrollBarVisibility="Auto">
+                        <StackPanel>
+                            <TextBlock Text="Command Setup" FontSize="16" FontWeight="SemiBold" />
+
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock Text="Task Label (optional)" />
+                                <TextBox Text="{Binding TaskLabel, UpdateSourceTrigger=PropertyChanged}" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock Text="Action (optional)" />
+                                <ComboBox ItemsSource="{Binding SelectedTool.Actions}"
+                                          SelectedItem="{Binding SelectedAction}"
+                                          DisplayMemberPath="Name" />
+                            </StackPanel>
+
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock Text="Options" />
+                                <ItemsControl ItemsSource="{Binding SelectedTool.Options}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="Auto" />
+                                                    <ColumnDefinition Width="*" />
+                                                    <ColumnDefinition Width="Auto" />
+                                                </Grid.ColumnDefinitions>
+                                                <CheckBox Grid.Column="0"
+                                                          VerticalAlignment="Center"
+                                                          IsChecked="{Binding IsSelected}"
+                                                          ToolTip="{Binding Description}"
+                                                          Visibility="{Binding IsBoolean, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                                                <TextBox Grid.Column="0"
+                                                         Width="200"
+                                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}"
+                                                         ToolTip="{Binding Description}"
+                                                         Visibility="{Binding IsBoolean, Converter={StaticResource InverseBooleanToVisibilityConverter}}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Margin="12,0,0,0"
+                                                           Text="{Binding DisplayName}"
+                                                           ToolTip="{Binding Description}" />
+                                                <Button Grid.Column="2"
+                                                        Content="Edit"
+                                                        Width="60"
+                                                        Margin="12,0,0,0"
+                                                        Click="OnEditOptionClicked" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+
+                            <StackPanel Margin="0,12,0,0">
+                                <TextBlock Text="Parameters" />
+                                <ItemsControl ItemsSource="{Binding SelectedTool.Parameters}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,6,0,0">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="180" />
+                                                    <ColumnDefinition Width="*" />
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Parameter.Name}" />
+                                                <TextBox Grid.Column="1"
+                                                         Text="{Binding Value, UpdateSourceTrigger=PropertyChanged}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+
+                    <Border Grid.Column="0" Grid.ColumnSpan="3" Grid.Row="2"
+                            BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="12" Margin="0,16,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Command Preview" FontWeight="SemiBold" />
+                                <TextBox Text="{Binding CommandPreview, Mode=OneWay}" IsReadOnly="True" Margin="0,6,0,0" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Copy" Width="100" Margin="12,0,0,0"
+                                    Command="{x:Static local:MainWindow.CopyCommand}" />
+                            <Button Grid.Column="2" Content="Save" Width="100" Margin="12,0,0,0"
+                                    Command="{x:Static local:MainWindow.GenerateCommand}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem x:Name="FavoritesTab" Header="Favorites">
+                <Grid Margin="8">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+
+                    <Grid Grid.Row="0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Grid.Column="0" Text="Favorites Quick Copy" FontSize="16" FontWeight="SemiBold" />
+                        <Grid Grid.Column="1" Width="180" Margin="0,0,8,0">
+                            <TextBox Text="{Binding FavoriteSearchText, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Text="Search favorites..."
+                                       Margin="6,4,0,0"
+                                       Foreground="{StaticResource TextMutedBrush}"
+                                       IsHitTestVisible="False"
+                                       Visibility="{Binding FavoriteSearchText, Converter={StaticResource StringNullOrEmptyToVisibilityConverter}}" />
+                        </Grid>
+                        <ComboBox Grid.Column="2" Width="150" Margin="0,0,8,0"
+                                  ItemsSource="{Binding FavoriteTagFilters}"
+                                  SelectedItem="{Binding SelectedFavoriteTagFilter}" />
+                        <Button Grid.Column="3" Content="Export" Width="90" Margin="0,0,8,0"
+                                Click="OnExportFavoritesClicked" />
+                        <Button Grid.Column="4" Content="Clear All" Width="90"
+                                Click="OnClearFavoritesClicked" />
+                    </Grid>
+
+                    <ListBox Grid.Row="1" ItemsSource="{Binding FavoritesView}" Margin="0,8,0,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Border BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="10" Margin="0,0,0,8">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0">
+                                            <TextBlock Text="{Binding Command}" FontFamily="Consolas" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding ToolActionLabel}" Foreground="{StaticResource TextMutedBrush}" Margin="0,4,0,0" />
+                                            <ItemsControl ItemsSource="{Binding Tags}" Margin="0,6,0,0">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate>
+                                                        <Border Background="{Binding ColorBrush}" CornerRadius="10" Padding="6,2" Margin="0,0,6,6">
+                                                            <TextBlock Text="{Binding Name}" Foreground="White" FontSize="11" />
+                                                        </Border>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                            <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                                <TextBlock Text="{Binding Task}" Foreground="{StaticResource TextMutedBrush}" />
+                                                <TextBlock Text="  •  " Foreground="{StaticResource TextMutedBrush}" />
+                                                <TextBlock Text="{Binding CreatedAtLocal}" Foreground="{StaticResource TextMutedBrush}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <Button Grid.Column="1" Content="Copy" Width="80" Margin="12,0,0,0"
+                                                Click="OnCopyFavoriteClicked" />
+                                        <Button Grid.Column="2" Content="Remove" Width="80" Margin="8,0,0,0"
+                                                Click="OnRemoveFavoriteClicked" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Border Grid.Row="2" BorderBrush="{StaticResource BorderBrush}" BorderThickness="1" Padding="12" Margin="0,12,0,0">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding PasteCommandText, UpdateSourceTrigger=PropertyChanged}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     Height="70"
+                                     VerticalScrollBarVisibility="Auto" />
+                            <Button Grid.Column="1" Content="Add" Width="90" Margin="12,0,0,0"
+                                    Click="OnAddFavoriteClicked" />
+                        </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>
