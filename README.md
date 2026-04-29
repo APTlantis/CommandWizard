@@ -1,16 +1,3 @@
----
-[project]
-name = "CommandWizard"
-slug = "commandwizard"
-
-description = "Schema-driven WinUI desktop tool for constructing CLI commands through a guided wizard interface"
-
-[tags]
-languages = ["C#"]
-platforms = ["windows", "linux"]
-tooling = ["docker"]
----
-
 # 📦 CommandWizard
 
 > Schema-driven WinUI desktop tool for constructing CLI commands through a guided wizard interface
